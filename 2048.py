@@ -76,13 +76,13 @@ def move_block(block, y, x, dy, dx):
         dist -= 1
 
 def handle_move(dy, dx):
-    for y in range(4):
-        for x in range(4):
-            if dy == 1 or dx == 1:
-                y, x = 3-y, 3-x  # Move from bottom or right
-            if grid[y][x] is not None:
-                move_block(grid[y][x], y, x, dy, dx)
-
+    for _ in range(3):  # Ensure maximum iterations for movement
+        for y in range(4):
+            for x in range(4):
+                if (dy == 1 and y == 3) or (dx == 1 and x == 3):
+                    continue  # Skip edges that can't move further
+                if grid[y][x] is not None:
+                    move_block(grid[y][x], y, x, dy, dx)
     place_new_block()
     update_blocks()
     refresh_canvas()
@@ -360,7 +360,7 @@ def place_new_block():
         return
 
     y, x = random.choice(empty_positions)
-    val = random.choices([2, 4, 8], [70, 20, 10])[0]
+    val = random.choices([2, 4], [90, 10])[0]
     block = canvas.create_image(GRID_POSITIONS[y][x][0], GRID_POSITIONS[y][x][1], image=get_image(val), anchor=NW)
     grid[y][x] = [block, val]
 
@@ -874,3 +874,4 @@ canvas.create_image(0, 0, image=GRID_BACKGROUND, anchor=NW)
 generate_start()
 canvas.pack()
 window.mainloop()
+
