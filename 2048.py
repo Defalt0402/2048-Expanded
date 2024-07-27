@@ -3,6 +3,7 @@ from tkinter.messagebox import showinfo, askyesno
 from csv import *
 from PIL import ImageTk, Image
 import random
+import numpy as np
 
 """Notes to marker:
     Screen resolution is 1280x720
@@ -44,96 +45,67 @@ import random
     After all blocks are moved, a new block is placed on the grid
     All blocks currently on the grid are then added to the blocks array so that the game will be able to be saved correctly
 """
-def left_key(event):  # Move blocks left
-    for y in range(0, 4):
-        for x in range(0, 4):
-            if grid[y][x] is not None:
-                if x == 0:
-                    continue
-                else:
-                    move_left(grid[y][x], y, x)
+def move_block(block, y, x, dy, dx):
+    global score, highestValue
+    dist = 3 if dy != 0 else 3 if dx != 0 else 0
+    while dist > 0:
+        new_y, new_x = y + dy, x + dx
+        if 0 <= new_y < 4 and 0 <= new_x < 4:
+            valmatch, overlap = overlapping(block[1], new_y, new_x)
+            if overlap and valmatch:
+                val = block[1]
+                newVal = val * 2
+                if newVal > highestValue:
+                    highestValue = newVal
+                canvas.move(block[0], dx * 44, dy * 44)
+                grid[y][x] = None
+                newBlock = canvas.create_image(GRID_POSITIONS[new_y][new_x][0], GRID_POSITIONS[new_y][new_x][1], image=get_image(newVal), anchor=NW)
+                grid[new_y][new_x] = [newBlock, newVal]
 
-    place_new_block()  # After all blocks have moved, place a new block on the screen
-
-    blocks.clear()  # Clear the blocks list and place blocks in
-    for y in range(0, 4):
-        for x in range(0, 4):
-            if grid[y][x] is not None:
-                blocks.append(f"{y}{x}{grid[y][x][1]}")
+                score += newVal
+                y, x = new_y, new_x
+            elif not overlap:
+                canvas.move(block[0], dx * 44, dy * 44)
+                grid[y][x] = None
+                grid[new_y][new_x] = block
+                y, x = new_y, new_x
             else:
-                continue
+                break
+        else:
+            break
+        dist -= 1
 
-    refresh_canvas()
-    update_score()
-
-
-def right_key(event):  # Move blocks right
-    for y in range(0, 4):
-        for x in range(3, -1, -1):
+def handle_move(dy, dx):
+    for y in range(4):
+        for x in range(4):
+            if dy == 1 or dx == 1:
+                y, x = 3-y, 3-x  # Move from bottom or right
             if grid[y][x] is not None:
-                if x == 3:
-                    continue
-                else:
-                    move_right(grid[y][x], y, x)
+                move_block(grid[y][x], y, x, dy, dx)
 
     place_new_block()
-
-    blocks.clear()
-    for y in range(0, 4):
-        for x in range(0, 4):
-            if grid[y][x] is not None:
-                blocks.append(f"{y}{x}{grid[y][x][1]}")
-            else:
-                continue
-
+    update_blocks()
     refresh_canvas()
     update_score()
 
+def left_key(event):
+    handle_move(0, -1)
 
-def up_key(event):  # Move blocks up
-    for x in range(0, 4):
-        for y in range(0, 4):
-            if grid[y][x] is not None:
-                if y == 0:
-                    continue
-                else:
-                    move_up(grid[y][x], y, x)
+def right_key(event):
+    handle_move(0, 1)
 
-    place_new_block()
+def up_key(event):
+    handle_move(-1, 0)
 
+def down_key(event):
+    handle_move(1, 0)
+
+def update_blocks():
     blocks.clear()
-    for y in range(0, 4):
-        for x in range(0, 4):
+    for y in range(4):
+        for x in range(4):
             if grid[y][x] is not None:
                 blocks.append(f"{y}{x}{grid[y][x][1]}")
-            else:
-                continue
-
-    refresh_canvas()
-    update_score()
-
-
-def down_key(event):  # Move blocks left
-    for x in range(0, 4):
-        for y in range(3, -1, -1):
-            if grid[y][x] is not None:
-                if y == 3:
-                    continue
-                else:
-                    move_down(grid[y][x], y, x)
-
-    place_new_block()
-
-    blocks.clear()
-    for y in range(0, 4):
-        for x in range(0, 4):
-            if grid[y][x] is not None:
-                blocks.append(f"{y}{x}{grid[y][x][1]}")
-            else:
-                continue
-
-    refresh_canvas()
-    update_score()
 
 
 # Changes game into a work friendly image
@@ -223,144 +195,6 @@ When values combine:
     Remove the block that would enter the other block 
     Set the grid of the spot where the values combine to be the new block with new value
 """
-def move_left(block, y, x):
-    global score, highestValue
-    dist = x
-    for i in range(dist):
-        valmatch, overlap = overlapping(block[1], y, x-1)  # Pass value, y, x-1 position
-        if overlap and valmatch:
-            val = block[1]
-            newVal = val*2
-            if newVal > highestValue:
-                highestValue = newVal
-            canvas.move(block[0], -44,0)
-            canvas.move(block[0], -44,0)
-            canvas.move(block[0], -44,0)
-            canvas.move(block[0], -44,0)
-            grid[y][x] = None
-            newBlock = canvas.create_image(GRID_POSITIONS[y][x-1][0], GRID_POSITIONS[y][x-1][1], image=get_image(newVal), anchor=NW)
-            grid[y][x-1] = [newBlock, newVal]  # Create new block with bigger value
-
-            score += newVal
-
-            x -= 1
-        elif not overlap:
-            canvas.move(block[0], -44,0)
-            canvas.move(block[0], -44,0)
-            canvas.move(block[0], -44,0)
-            canvas.move(block[0], -44,0)
-            temp = block
-            grid[y][x-1] = temp
-            grid[y][x] = None
-            
-            x -= 1
-        else:
-            break
-
-
-def move_right(block, y, x):
-    global score, highestValue
-    dist = 3-x
-    for i in range(dist):
-        valmatch, overlap = overlapping(block[1], y, x+1)
-        if overlap and valmatch:
-            val = block[1]
-            newVal = val*2
-            if newVal > highestValue:
-                highestValue = newVal
-            canvas.move(block[0], 44,0)
-            canvas.move(block[0], 44,0)
-            canvas.move(block[0], 44,0)
-            canvas.move(block[0], 44,0)
-            grid[y][x] = None
-            newBlock = canvas.create_image(GRID_POSITIONS[y][x+1][0], GRID_POSITIONS[y][x+1][1], image=get_image(newVal), anchor=NW)
-            grid[y][x+1] = [newBlock, newVal]
-
-            score += newVal
-            
-            x += 1
-        elif not overlap:
-            canvas.move(block[0], 44,0)
-            canvas.move(block[0], 44,0)
-            canvas.move(block[0], 44,0)
-            canvas.move(block[0], 44,0)
-            temp = block
-            grid[y][x+1] = temp
-            grid[y][x] = None
-            
-            x += 1
-        else:
-            break
-
-
-def move_up(block, y, x):
-    global score, highestValue
-    dist = y
-    for i in range(dist):
-        valmatch, overlap = overlapping(block[1], y-1, x)
-        if overlap and valmatch: #Will always occur at wall
-            val = block[1]
-            newVal = val*2
-            if newVal > highestValue:
-                highestValue = newVal
-            canvas.move(block[0], 0,-44)
-            canvas.move(block[0], 0,-44)
-            canvas.move(block[0], 0,-44)
-            canvas.move(block[0], 0,-44)
-            grid[y][x] = None
-            newBlock = canvas.create_image(GRID_POSITIONS[y-1][x][0], GRID_POSITIONS[y-1][x][1], image=get_image(newVal), anchor=NW)
-            grid[y-1][x] = [newBlock, newVal]
-
-            score += newVal
-            
-            y -= 1
-        elif not overlap:
-            canvas.move(block[0], 0,-44)
-            canvas.move(block[0], 0,-44)
-            canvas.move(block[0], 0,-44)
-            canvas.move(block[0], 0,-44)
-            temp = block
-            grid[y-1][x] = temp
-            grid[y][x] = None
-            
-            y -= 1
-        else:
-            break
-
-def move_down(block, y, x):
-    global score, highestValue
-    dist = 3-y
-    for i in range(dist):
-        valmatch, overlap = overlapping(block[1], y+1, x)
-        if overlap and valmatch:
-            val = block[1]
-            newVal = val*2
-            if newVal > highestValue:
-                highestValue = newVal
-            canvas.move(block[0], 0,44)
-            canvas.move(block[0], 0,44)
-            canvas.move(block[0], 0,44)
-            canvas.move(block[0], 0,44)
-            grid[y][x] = None
-            newBlock = canvas.create_image(GRID_POSITIONS[y+1][x][0], GRID_POSITIONS[y+1][x][1], image=get_image(newVal), anchor=NW)
-            grid[y+1][x] = [newBlock, newVal]
-
-            score += newVal
-            
-            y += 1
-        elif not overlap:
-            canvas.move(block[0], 0,44)
-            canvas.move(block[0], 0,44)
-            canvas.move(block[0], 0,44)
-            canvas.move(block[0], 0,44)
-            temp = block
-            grid[y+1][x] = temp
-            grid[y][x] = None
-            
-            y += 1
-        else:
-            break
-            
 
 # Functions for checking colisions below
 
@@ -372,8 +206,7 @@ def overlapping(val, y, x):
     return the result of matching_values, and overlap
     """
     if grid[y][x] is not None:
-        overlap = True
-        return matching_values(val, y, x), overlap
+        return matching_values(val, y, x), True
     return False, False
 
 
@@ -384,12 +217,7 @@ def matching_values(val, y, x):
     else if the value of the current and the colliding block are the same, return True
     else return true
     """
-    if val == 65536:  # Cannot be greater than 65536
-        return False
-    if val == grid[y][x][1]:
-        return True
-    return False
-
+    return val != 65536 and val == grid[y][x][1]
 
 #Functions for checking end of game
 
@@ -402,20 +230,15 @@ def check_loss():
         If a combination exists, loss is false
         else, game over
     """
-    loss = True
-    for y in range(0, 4):
-        for x in range(0, 4):
-            if x != 3:
-                if grid[y][x][1] == grid[y][x+1][1] and grid[y][x][1] != 65536:
-                    loss = False  # If a pair of matching values is found
-                    break
-            if y != 3:
-                if grid[y][x][1] == grid[y+1][x][1] and grid[y][x][1] != 65536:
-                    loss = False
-                    break
-
-    if loss:
-        game_over()
+    for y in range(4):
+        for x in range(4):
+            if grid[y][x] is None:
+                return
+            if x < 3 and grid[y][x][1] == grid[y][x+1][1] and grid[y][x][1] != 65536:
+                return
+            if y < 3 and grid[y][x][1] == grid[y+1][x][1] and grid[y][x][1] != 65536:
+                return
+    game_over()
 
 
 # If there are no more possible moves, prompt the player to save their score to the leaderboard, or to start a new game
@@ -425,9 +248,9 @@ def game_over():
     gameOverWindow.title("Game Over")
     message = f"There are no more possible moves! Your score is {score}, and your largest number was {highestValue}. What would you like to do now?"
     Label(gameOverWindow, text=message).pack()
-    Button(gameOverWindow, text='Save To Leaderboard', command= lambda: save_to_leaderboard()).pack()
-    Button(gameOverWindow, text='New Game', command= lambda: new_game()).pack()
-    Button(gameOverWindow, text='Quit', command= lambda: game_quit()).pack()
+    Button(gameOverWindow, text='Save To Leaderboard', command=save_to_leaderboard).pack()
+    Button(gameOverWindow, text='New Game', command=new_game).pack()
+    Button(gameOverWindow, text='Quit', command=game_quit).pack()
 
 
 # Functions for saving to leaderboard below
@@ -506,16 +329,11 @@ def check_name(name):
 # Resets all states back to default    
 def new_game():
     global blocks, grid, score, highestValue
-    if "gameOverWindow" in globals():
+    if 'gameOverWindow' in globals():
         gameOverWindow.destroy()
-        gameOverWindow.update()
 
-    messagebox = askyesno(title="Are you sure?", message="Are you sure you want to start a new game? All progress will be lost.", icon='warning')
-    if messagebox:
-        grid = [[None, None, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-        [None, None, None, None]] 
+    if askyesno(title="Are you sure?", message="Are you sure you want to start a new game? All progress will be lost.", icon='warning'):
+        grid = [[None for _ in range(4)] for _ in range(4)]
         blocks = []
         score = 0
         highestValue = 2
@@ -527,8 +345,8 @@ def new_game():
 
 # Close all game windows
 def game_quit():
-    gameOverWindow.destroy()
-    gameOverWindow.update()
+    if 'gameOverWindow' in globals():
+        gameOverWindow.destroy()
     window.quit()
   
 
@@ -536,50 +354,23 @@ def game_quit():
 
 # Chooses a random empty position on the grid to place a new block. new block has 70% chanve to be 2, 20% for 4 and 10% for 8
 def place_new_block():
-    NoneInGrid = False
-    for i in range(0, 4):
-        for j in range(0, 4):
-            if grid[i][j] is None:
-                NoneInGrid = True
-                break
-    
-    if NoneInGrid:  # If there is a free space
-        pass
-    else:
-        check_loss()  # Check whether game is lost, or if there is a possible move
+    empty_positions = [(y, x) for y in range(4) for x in range(4) if grid[y][x] is None]
+    if not empty_positions:
+        check_loss()
+        return
 
-    if NoneInGrid:
-        while True:
-            y = random.randint(0, 3)
-            x = random.randint(0, 3)
-            if grid[y][x] is not None:
-                continue
-            else:
-                break
-
-        
-        # Choose a value between 2 and 8
-        valueChoice = random.randint(0, 10)
-        if valueChoice in (0,1,2,3,4,5,6):  # 70% chance of being a 2
-            val = 2
-        elif valueChoice in (7,8):
-            val = 4
-        else:
-            val = 8
-        
-        block = canvas.create_image(GRID_POSITIONS[y][x][0], GRID_POSITIONS[y][x][1], image=get_image(val), anchor=NW)
-        grid[y][x] = [block, val]
+    y, x = random.choice(empty_positions)
+    val = random.choices([2, 4, 8], [70, 20, 10])[0]
+    block = canvas.create_image(GRID_POSITIONS[y][x][0], GRID_POSITIONS[y][x][1], image=get_image(val), anchor=NW)
+    grid[y][x] = [block, val]
 
 
 # Place a block on the board
 def generate_start():
-    x = random.randint(0,3)
-    y = random.randint(0,3)
+    y, x = random.randint(0, 3), random.randint(0, 3)
     blockImage = canvas.create_image(GRID_POSITIONS[y][x][0], GRID_POSITIONS[y][x][1], image=IMAGE_2, anchor=NW)
-    blockValue = 2
-    block = [blockImage, blockValue]
-    grid[y][x] = block
-    blocks.append(f"{y}{x}{blockValue}")
+    grid[y][x] = [blockImage, 2]
+    blocks.append(f"{y}{x}2")
 
 
 # Functions for setting up the window below this point
@@ -1000,41 +791,41 @@ canvas.bind('<F6>', cheat)
 canvas.focus_set()
 
 # Loading all images to be used
-load = Image.open("background.jpg")
+load = Image.open("images/background.jpg")
 GRID_BACKGROUND = ImageTk.PhotoImage(load)
-load = Image.open("2.jpg")
+load = Image.open("images/2.jpg")
 IMAGE_2 = ImageTk.PhotoImage(load)
-load = Image.open("4.jpg")
+load = Image.open("images/4.jpg")
 IMAGE_4 = ImageTk.PhotoImage(load)
-load = Image.open("8.jpg")
+load = Image.open("images/8.jpg")
 IMAGE_8 = ImageTk.PhotoImage(load)
-load = Image.open("16.jpg")
+load = Image.open("images/16.jpg")
 IMAGE_16 = ImageTk.PhotoImage(load)
-load = Image.open("32.jpg")
+load = Image.open("images/32.jpg")
 IMAGE_32 = ImageTk.PhotoImage(load)
-load = Image.open("64.jpg")
+load = Image.open("images/64.jpg")
 IMAGE_64 = ImageTk.PhotoImage(load)
-load = Image.open("128.jpg")
+load = Image.open("images/128.jpg")
 IMAGE_128 = ImageTk.PhotoImage(load)
-load = Image.open("256.jpg")
+load = Image.open("images/256.jpg")
 IMAGE_256 = ImageTk.PhotoImage(load)
-load = Image.open("512.jpg")
+load = Image.open("images/512.jpg")
 IMAGE_512 = ImageTk.PhotoImage(load)
-load = Image.open("1024.jpg")
+load = Image.open("images/1024.jpg")
 IMAGE_1024 = ImageTk.PhotoImage(load)
-load = Image.open("2048.jpg")
+load = Image.open("images/2048.jpg")
 IMAGE_2048 = ImageTk.PhotoImage(load)
-load = Image.open("4096.jpg")
+load = Image.open("images/4096.jpg")
 IMAGE_4096 = ImageTk.PhotoImage(load)
-load = Image.open("8192.jpg")
+load = Image.open("images/8192.jpg")
 IMAGE_8192 = ImageTk.PhotoImage(load)
-load = Image.open("16384.jpg")
+load = Image.open("images/16384.jpg")
 IMAGE_16384 = ImageTk.PhotoImage(load)
-load = Image.open("32768.jpg")
+load = Image.open("images/32768.jpg")
 IMAGE_32768 = ImageTk.PhotoImage(load)
-load = Image.open("65536.jpg")
+load = Image.open("images/65536.jpg")
 IMAGE_65536 = ImageTk.PhotoImage(load)
-load = Image.open("bosskey.png")
+load = Image.open("images/bosskey.png")
 IMAGE_BOSS = ImageTk.PhotoImage(load)
 
 
