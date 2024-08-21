@@ -15,9 +15,8 @@
 1. [Features](#features)
 2. [Installation](#installation)
 3. [Usage](#usage)
-4. [Customization](#customization)
-5. [License](#license)
-6. [References](#references)
+4. [License](#license)
+5. [References](#references)
 
 ---
 
